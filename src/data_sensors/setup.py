@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'my_package'
+package_name = 'data_sensors'
 
 setup(
     name=package_name,
@@ -13,18 +13,13 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='danitur2',
-    maintainer_email='danyturcian@gmail.com',
+    maintainer='semidaturcian',
+    maintainer_email='semidaturcian@gmail.com',
     description='TODO: Package description',
     license='Apache-2.0',
-    extras_require={
-        'test': [
-            'pytest',
-        ],
-    },
     entry_points={
         'console_scripts': [
-            'my_node = my_package.my_node:main'
+            'my_node = data_sensors.nuscenes_player:main'
         ],
     },
 )
