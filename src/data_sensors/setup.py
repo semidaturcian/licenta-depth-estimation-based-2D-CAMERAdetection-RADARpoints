@@ -18,8 +18,8 @@ setup(
     description='TODO: Package description',
     license='Apache-2.0',
     entry_points={
-        'console_scripts': [
-            'my_node = data_sensors.nuscenes_player:main'
-        ],
-    },
+    'console_scripts': [
+        'nuscenes_player = data_sensors.nodes.nuscenes_player:main',
+    ],
+  },
 )
