@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy import time
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
-from interfaces import BoundingBox
+from bounding_box_msgs import BoundingBox, BoundingBoxList
 from sensor_msgs import Image
 from model_inference import InferenceYoloModel
 
@@ -25,7 +25,7 @@ class DetectionNode(Node):
         bbox = self.model_run(img)
 
         message_from_detector = self.extract_data_for_ros(bbox)
-
+        self.publishers_.publish(message_from_detector)
 
     def preprocessing(self, image):
         header = image.header
@@ -38,5 +38,15 @@ class DetectionNode(Node):
 
         return img
 
-    def extract_data_for_ros(self, bb):
-        
+    def extract_data_for_ros(self, boundingboxes):
+        ros_boundingbox = BoundingBoxList()
+        for bb in boundingboxes:
+            bb_ros = BoundingBox()
+            bb_ros.center_x = bb[0]
+            bb_ros.center_y = bb[1]
+            bb_ros.height = bb[2]
+            bb_ros.width =  bb[3]
+            ros_boundingbox.boxes.append(bb_ros)
+
+        ros_boundingbox.header.timestamp = time()
+        return ros_boundingbox
