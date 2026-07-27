@@ -113,5 +113,6 @@ class RadarPreprocessor:
         points = self.filter_by_rcs(points)
 
         points = self.filter_by_velocity(points)
-
+        # print(f"Radar Points inside radar preprocessing: {points} and radar points type {type(points)}")
+        
         return points

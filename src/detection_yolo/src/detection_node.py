@@ -1,3 +1,4 @@
+#!/usr/lib/python3
 import rclpy
 from rclpy.node import Node
 from rclpy import time
@@ -10,15 +11,15 @@ from model_inference import InferenceYoloModel
 class DetectionNode(Node):
     def __init__(self):
         super().__init__('detection_node', allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
-        self.output_topic = self.get_parameter('output_topic').get_parameter_value().string_value
-        self.input_topic = self.get_parameter('input_topic').get_parameter_value().string_value
+        # self.output_topic = self.get_parameter('output_topic').get_parameter_value().string_value
+        # self.input_topic = self.get_parameter('input_topic').get_parameter_value().string_value
         self.qos_profile = QoSProfile(reliability = QoSReliabilityPolicy.BEST_EFFORT, 
                                       history=QoSHistoryPolicy.KEEP_LAST,
                                        depth = 1)
         self.model_run = InferenceYoloModel()
-        self.publisher_ = self.create_publisher(BoundingBox, self.output_topic, qos_profile=self.qos_profile)
+        self.publisher_ = self.create_publisher(BoundingBox, "/processing/bounding_boxes", qos_profile=self.qos_profile)
 
-        self.subsription_ = self.create_subscription(Image, self.input_topic, self.callback, qos_profile=self.qos_profile)
+        self.subsription_ = self.create_subscription(Image, "/ros/camera/images_sender", self.callback, qos_profile=self.qos_profile)
 
     def callback(self, msg:Image):
         img = self.preprocessing(msg) 

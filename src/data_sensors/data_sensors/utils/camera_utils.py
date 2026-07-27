@@ -43,9 +43,8 @@ class CameraUtils:
         Returns:
             sample_data dictionary.
         """
-
+        # print(f"Sample data type {type(sample['data'])}")
         camera_token = sample["data"][camera_name]
-
         return self._nusc.get("sample_data", camera_token)
 
     def get_image_path(
@@ -65,7 +64,6 @@ class CameraUtils:
         """
 
         camera_data = self.get_camera_data(sample, camera_name)
-
         return self._dataroot / camera_data["filename"]
 
     def load_image(
@@ -83,16 +81,12 @@ class CameraUtils:
         Returns:
             OpenCV image in BGR format.
         """
-
         image_path = self.get_image_path(sample, camera_name)
-
         image = cv2.imread(str(image_path))
-
         if image is None:
             raise RuntimeError(
                 f"Unable to load image: {image_path}"
             )
-
         return image
 
     @staticmethod

@@ -1,6 +1,7 @@
 from std_msgs.msg import Header
 from sensor_msgs.msg import PointCloud2, PointField
 from sensor_msgs_py import point_cloud2
+import numpy as np
 
 
 class PointCloudUtils:
@@ -11,7 +12,7 @@ class PointCloudUtils:
     @staticmethod
     def create_pointcloud2(
         header: Header,
-        points
+        points : np.ndarray
     ) -> PointCloud2:
         """
         Convert radar detections into a PointCloud2 message.
