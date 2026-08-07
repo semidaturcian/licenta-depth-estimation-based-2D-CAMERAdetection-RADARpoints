@@ -1,3 +1,0 @@
-detection_node:
-  output_topic: '/detection/bbox/coordinates'
-  

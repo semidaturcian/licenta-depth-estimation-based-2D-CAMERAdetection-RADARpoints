@@ -3,7 +3,7 @@
    href="http://download.ros.org/schema/package_format3.xsd"
    schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
- <name>detection_yolo</name>
+ <name>boundingbox_detection</name>
  <version>0.0.0</version>
  <description>Bounding boxes publisher</description>
  <maintainer email="semidaturcian@gmail.com">semidaturcian</maintainer>
@@ -12,9 +12,11 @@
  <buildtool_depend>ament_cmake</buildtool_depend>
 
  <depend>rclpy</depend>
+ <depend>ultralytics</depend>
  <depend>std_msgs</depend>
+ <depend>cv2</depend>
 
- <export>
-   <build_type>ament_cmake</build_type>
- </export>
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
 </package>

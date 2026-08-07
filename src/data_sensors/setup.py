@@ -4,7 +4,7 @@ package_name = 'data_sensors'
 
 setup(
     name=package_name,
-    version='0.0.0',
+    version='0.0.1',
     packages=find_packages(exclude=['test']),
     data_files=[
         ('share/ament_index/resource_index/packages',
@@ -15,7 +15,7 @@ setup(
     zip_safe=True,
     maintainer='semidaturcian',
     maintainer_email='semidaturcian@gmail.com',
-    description='TODO: Package description',
+    description='Sensor data sender.',
     license='Apache-2.0',
     entry_points={
     'console_scripts': [
