@@ -1,5 +1,4 @@
 from typing import Any
-
 from nuscenes.nuscenes import NuScenes
 
 
@@ -95,3 +94,4 @@ class CalibrationUtils:
             "ego_pose",
             sensor_data["ego_pose_token"]
         )
+

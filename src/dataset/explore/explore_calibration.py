@@ -1,8 +1,6 @@
-from pathlib import Path
-
 from nuscenes.nuscenes import NuScenes
 
-DATAROOT = Path.home() / "datasets" / "nuscenes"
+DATAROOT = "/home/danitur2/semida/licenta/data/nuscenes"
 
 nusc = NuScenes(
     version="v1.0-mini",
@@ -45,6 +43,19 @@ print("RADAR CALIBRATION")
 print("=" * 60)
 
 for key, value in radar_calib.items():
+    print(f"{key}:")
+    print(value)
+    print()
+
+ego_token = sample["data"]["CAM_FRONT"]
+sensor_data = nusc.get("sample_data", ego_token)
+ego_calib = nusc.get("calibrated_sensor", sensor_data["ego_pose_token"])
+
+print("=" * 60)
+print("Ego CALIBRATION")
+print("=" * 60)
+
+for key, value in ego_calib.items():
     print(f"{key}:")
     print(value)
     print()
