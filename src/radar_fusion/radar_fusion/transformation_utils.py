@@ -11,7 +11,7 @@ class TransformationUtils:
 
         ones = np.ones((xyz.shape[0], 1))
         xyz_h = np.hstack((xyz, ones))
-        T_r_c = build_transformation_matrix(camera_calib, radar_calib)
+        T_r_c = TransformationUtils.build_transformation_matrix(camera_calib, radar_calib)
         xyz_camera = (T_r_c @ xyz_h.T).T
 
         radar_p_c = radar_points.copy()

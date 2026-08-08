@@ -36,13 +36,17 @@ class Projection(Node):
         camera_calib = self.calib.get_camera_calibration(sample)
         radar_calib =  self.calib.get_radar_calibration(sample)
 
-        point_data = self.from_pointcloud2(msg)
-
-        point_transformed = TransformationUtils.transform_points(point_data,
+        points_raw_data = self.from_pointcloud2(msg)
+        # print(f"Raw point data shape {points_raw_data.shape}")
+        # for point_data in points_raw_data:
+        #     print(f"Point data shape {point_data.shape}")
+        camera_points = TransformationUtils.transform_points(points_raw_data,
                                                                  camera_calib,
                                                                  radar_calib)
+        cp = camera_points[:, :3]
+        mask = cp[:, 2] > 0
 
-        print(f"Radar point transformed {point_transformed}")
+        print(f"Visible points: {np.sum(mask)/len(mask)}")
 
     def from_pointcloud2(self, msg) -> np.ndarray:
             """
@@ -54,18 +58,17 @@ class Projection(Node):
                 [x, y, z, vx, vy, rcs],
                 ...]
             """
-
-            points = np.array(
-                list(
-                    point_cloud2.read_points(
+            point = point_cloud2.read_points(
                         msg,
                         field_names=("x", "y", "z", "vx", "vy", "rcs"),
                         skip_nans=True
                     )
-                ),
-                dtype=np.float32
-            )
-
+            
+            points = np.array([
+                                    [p["x"], p["y"], p["z"], p["vx"], p["vy"], p["rcs"]]
+                                    for p in point
+                                ],
+                                dtype=np.float32)
             return points 
 
 def main():
