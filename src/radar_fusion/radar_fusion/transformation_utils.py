@@ -1,6 +1,8 @@
 import numpy as np
 # from calibration_utils import CalibrationUtils
+# from nuscenes.nuscenes import NuScenes
 from pyquaternion import Quaternion
+
 
 class TransformationUtils:
     
@@ -38,10 +40,27 @@ class TransformationUtils:
 
         return T_cam_radar
 
-
     @staticmethod
-    def point_cloud_to_pixel(points_cloud, camera_calib):
-        cam_intrisic = camera_calib["camera_intrinsic"]
+    def point_cloud_to_pixel(camera_point, camera_calib):
+        K = np.array(
+            camera_calib,
+            dtype=np.float64
+        )
+
+        xyz = np.asarray(
+            camera_point[:3],
+            dtype=np.float64
+        )
+
+        X, Y, Z = xyz
+        if Z.all() <= 0:
+            return None
+        P = K @ xyz
+        u = P[0] / P[2]
+        v = P[1] / P[2]
+        print(f"U = {u}")
+        print(f"V = {v}")
+        return u, v
 
 def main():
 
@@ -58,5 +77,8 @@ def main():
 
     calib = CalibrationUtils(nusc)
     camera_calib = calib.get_camera_calibration(sample)
+    print(f"Camera intrinsic {calib.get_camera_intrinsic(sample)}")
     radar_calib = calib.get_radar_calibration(sample)
 
+if __name__ == "__main__":
+    main()

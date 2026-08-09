@@ -15,6 +15,7 @@ class DetectionNode(Node):
         super().__init__('detection_node', allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
         # self.output_topic = self.get_parameter('output_topic').get_parameter_value().string_value
         # self.input_topic = self.get_parameter('input_topic').get_parameter_value().string_value
+        self.get_logger().info("YOLO Inference started.")
         self.qos_profile = QoSProfile(reliability = QoSReliabilityPolicy.BEST_EFFORT, 
                                       history=QoSHistoryPolicy.KEEP_LAST,
                                        depth = 1)
