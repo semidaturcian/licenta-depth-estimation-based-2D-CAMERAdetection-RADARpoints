@@ -48,18 +48,17 @@ class TransformationUtils:
         )
 
         xyz = np.asarray(
-            camera_point[:3],
+            camera_point[:, :3],
             dtype=np.float64
         )
+        print(f"Camera calib = {K}")
+        print(f"xyz = {xyz}")
 
-        X, Y, Z = xyz
-        if Z.all() <= 0:
-            return None
-        P = K @ xyz
-        u = P[0] / P[2]
-        v = P[1] / P[2]
-        print(f"U = {u}")
-        print(f"V = {v}")
+        P = (K @ xyz.T).T
+        print(f"P = {P}")
+        u = P[:, 0] / P[:, 2]
+        v = P[:, 1] / P[:, 2]
+        print(f" u = {u} \n v = {v}")
         return u, v
 
 def main():
