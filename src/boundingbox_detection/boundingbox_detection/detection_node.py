@@ -7,7 +7,7 @@ from bounding_box_msgs.msg import BoundingBox, BoundingBoxList
 from sensor_msgs.msg import Image
 from boundingbox_detection.model_inference import InferenceYoloModel
 from cv_bridge import CvBridge
-from boundingbox_detection.visualization import Visualization
+# from boundingbox_detection.visualization import Visualization
 
 
 class DetectionNode(Node):
@@ -23,16 +23,16 @@ class DetectionNode(Node):
         self.bridge = CvBridge()
 
         self.publisher_ = self.create_publisher(BoundingBoxList, "/processing/bounding_boxes", qos_profile=self.qos_profile)
-        self.pub_debug = self.create_publisher(Image, "/debug/image_with_bbox", qos_profile = self.qos_profile)
+        # self.pub_debug = self.create_publisher(Image, "/debug/image_with_bbox", qos_profile = self.qos_profile)
         self.subsription_ = self.create_subscription(Image, "/ros/camera/images_sender", self.callback, qos_profile=self.qos_profile)
 
     def callback(self, msg:Image):
         img = self.preprocessing(msg) # Transform imaginea din formatul ROS in openCV (cv2)
         bbox = self.model_run.model_inference(img)
 
-        img_d = Visualization.draw_detection(img, bbox)
-        img_debug = self.bridge.cv2_to_imgmsg(img_d, encoding = "bgr8")
-        self.pub_debug.publish(img_debug)
+        # img_d = Visualization.draw_detection(img, bbox)
+        # img_debug = self.bridge.cv2_to_imgmsg(img_d, encoding = "bgr8")
+        # self.pub_debug.publish(img_debug)
         message_from_detector = self.extract_data_for_ros(bbox)
         self.publisher_.publish(message_from_detector)
 

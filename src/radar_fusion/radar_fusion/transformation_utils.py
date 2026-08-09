@@ -51,14 +51,10 @@ class TransformationUtils:
             camera_point[:, :3],
             dtype=np.float64
         )
-        print(f"Camera calib = {K}")
-        print(f"xyz = {xyz}")
 
         P = (K @ xyz.T).T
-        print(f"P = {P}")
         u = P[:, 0] / P[:, 2]
         v = P[:, 1] / P[:, 2]
-        print(f" u = {u} \n v = {v}")
         return u, v
 
 def main():

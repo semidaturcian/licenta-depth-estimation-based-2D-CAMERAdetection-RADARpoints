@@ -4,6 +4,7 @@ from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 
 from radar_fusion.transformation_utils import TransformationUtils
 from radar_fusion.calibration_utils import CalibrationUtils
+from bounding_box_msgs.msg import BoundingBox, BoundingBoxList
 
 from sensor_msgs.msg import Image, PointCloud2
 from sensor_msgs_py import point_cloud2
@@ -11,9 +12,7 @@ from sensor_msgs_py import point_cloud2
 from nuscenes.nuscenes import NuScenes
 import numpy as np
 from cv_bridge import CvBridge
-
-from message_filters import Subscriber
-from message_filters import ApproximateTimeSynchronizer
+from radar_fusion.fusion_utils import depth_estimation
 
 from radar_fusion.visualization import Visualization
 
@@ -42,47 +41,50 @@ class Projection(Node):
                                        depth = 3)
         self.last_image = None
         self.last_radar = None
+        self.last_bbox = None
         self.pub_deb = self.create_publisher(Image, "/projection/debug/img_debug", qos_profile = self.qos_profile)
         self.radar_sub_ = self.create_subscription(PointCloud2, "/ros/radar/points", self.radar_callback, qos_profile = self.qos_profile)
         self.img_sub_ = self.create_subscription(Image, "/ros/camera/images_sender", self.img_callback, qos_profile = self.qos_profile)
-        # self.radar_sub_ = Subscriber(self, PointCloud2, "/ros/radar/points", qos_profile = self.qos_profile)
-        # self.image_sub_ = Subscriber(self, Image, "/debug/image_with_bbox", qos_profile = self.qos_profile)
+        self.bb_sub_ = self.create_subscription(BoundingBoxList, "/processing/bounding_boxes", self.boundingbox_callback, qos_profile = self.qos_profile)
+        
+    def boundingbox_callback(self, bb_msg):
+        self.last_bbox = bb_msg
+        self.process_data()
 
-        # self.sync = ApproximateTimeSynchronizer(
-        #     [self.image_sub_, self.radar_sub_],
-        #     queue_size=10,
-        #     slop=0.5
-        #      )
-
-        # self.sync.registerCallback(self.callback)
     def radar_callback(self, radar_msg):
-        self.get_logger().info("Callback-ul radar")
         self.last_radar = radar_msg
         self.process_data()
 
     def img_callback(self, img_msg):
-        self.get_logger().info("Callback-ul imagine")
         self.last_image = img_msg
         self.process_data()
     
     def process_data(self):
-        if self.last_image is None or self.last_radar is None:
+        if self.last_bbox is None or self.last_radar is None:
+            print("EXIT")
             return
         
-        self.get_logger().info("RADAR si Camera synced si callback apelat")
+        self.get_logger().info("RADAR si Camera detection synced.")
         points_raw_data = self.from_pointcloud2(self.last_radar)
         camera_points = TransformationUtils.transform_points(points_raw_data,
                                                                  self.camera_calib,
                                                                  self.radar_calib)
         u,v = TransformationUtils.point_cloud_to_pixel(camera_points, self.camera_intrinsic)
-        # print(f"Points_to_image shape {pixels[0].shape} \n type {type(pixels)}")
-        debug_img = self.bridge.imgmsg_to_cv2(
-            self.last_image,
-            desired_encoding="bgr8"
-             )
-        img = Visualization.draw_point_cloud(debug_img, u, v)
-        img2ros = self.bridge.cv2_to_imgmsg(img, encoding = "bgr8")
-        self.pub_deb.publish(img2ros)
+
+        bb_box_values = self.last_bbox.boxes
+        distances = depth_estimation(bbox=bb_box_values, p_u=u, p_v=v, cam_points=camera_points)
+
+        for index, bb in enumerate(bb_box_values):
+            print(f"Center_x = {bb.center_x} \n Center_y = {bb.center_y} \n distance {distances[index]}")
+                  
+        if self.last_image is not None:
+            debug_img = self.bridge.imgmsg_to_cv2(
+                self.last_image,
+                desired_encoding="bgr8"
+                )
+            all_points_img = Visualization.draw_point_cloud(debug_img, u, v)
+            all_points_img2ros = self.bridge.cv2_to_imgmsg(all_points_img, encoding = "bgr8")
+            self.pub_deb.publish(all_points_img2ros)
 
 
     def from_pointcloud2(self, msg) -> np.ndarray:
