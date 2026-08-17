@@ -11,6 +11,5 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     msg/BoundingBoxList.msg
     DEPENDENCIES builtin_interfaces std_msgs
 )
-
 ament_package()
 

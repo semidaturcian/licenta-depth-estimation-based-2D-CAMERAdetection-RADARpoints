@@ -48,6 +48,7 @@ class Projection(Node):
         self.bb_sub_ = self.create_subscription(BoundingBoxList, "/processing/bounding_boxes", self.boundingbox_callback, qos_profile = self.qos_profile)
         
     def boundingbox_callback(self, bb_msg):
+        print("BBox callback!")
         self.last_bbox = bb_msg
         self.process_data()
 
@@ -74,8 +75,8 @@ class Projection(Node):
         bb_box_values = self.last_bbox.boxes
         distances = depth_estimation(bbox=bb_box_values, p_u=u, p_v=v, cam_points=camera_points)
 
-        for index, bb in enumerate(bb_box_values):
-            print(f"Center_x = {bb.center_x} \n Center_y = {bb.center_y} \n distance {distances[index]}")
+        # for index, bb in enumerate(bb_box_values):
+        #     # print(f"Center_x = {bb.center_x} \n Center_y = {bb.center_y} \n distance {distances[index]}")
                   
         if self.last_image is not None:
             debug_img = self.bridge.imgmsg_to_cv2(
@@ -83,31 +84,20 @@ class Projection(Node):
                 desired_encoding="bgr8"
                 )
             all_points_img = Visualization.draw_point_cloud(debug_img, u, v)
-            all_points_img2ros = self.bridge.cv2_to_imgmsg(all_points_img, encoding = "bgr8")
+            debug_imagine = Visualization.draw_detection(all_points_img, bb_box_values, u, v)
+            all_points_img2ros = self.bridge.cv2_to_imgmsg(debug_imagine, encoding = "bgr8")
             self.pub_deb.publish(all_points_img2ros)
 
 
     def from_pointcloud2(self, msg) -> np.ndarray:
-            """
-            Convert a PointCloud2 message into a Nx6 numpy array.
-
-            Output format:
-
-                [[x, y, z, vx, vy, rcs],
-                [x, y, z, vx, vy, rcs],
-                ...]
-            """
             point = point_cloud2.read_points(
                         msg,
                         field_names=("x", "y", "z", "vx", "vy", "rcs"),
                         skip_nans=True
                     )
             
-            points = np.array([
-                                    [p["x"], p["y"], p["z"], p["vx"], p["vy"], p["rcs"]]
-                                    for p in point
-                                ],
-                                dtype=np.float32)
+            points = np.array([ [p["x"], p["y"], p["z"], p["vx"], p["vy"], p["rcs"]]
+                                    for p in point ], dtype=np.float32)
             return points 
 
 def main():

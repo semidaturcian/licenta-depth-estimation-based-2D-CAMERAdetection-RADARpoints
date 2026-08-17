@@ -59,7 +59,7 @@ class NuScenesPlayer(Node):
         self.camera_publisher = self.create_publisher(Image, '/ros/camera/images_sender', qos_profile=self.qos_profile)
         self.radar_publisher = self.create_publisher(PointCloud2, '/ros/radar/points', qos_profile=self.qos_profile)
 
-        timer = self.create_timer(0.08, self.callback)
+        timer = self.create_timer(0.06, self.callback)
 
     def callback(self):
         # 1. Camera
