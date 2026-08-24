@@ -12,8 +12,9 @@ from sensor_msgs_py import point_cloud2
 from nuscenes.nuscenes import NuScenes
 import numpy as np
 from cv_bridge import CvBridge
+import cv2
 from radar_fusion.fusion_utils import depth_estimation
-
+import os
 from radar_fusion.visualization import Visualization
 
 class Projection(Node):
@@ -29,7 +30,7 @@ class Projection(Node):
         )
         self.bridge = CvBridge()
         self.calib = CalibrationUtils(self.nusc)
-        
+        self.path_output = '/home/danitur2/semida/licenta/data/results'
         scene = self.nusc.scene[0]
         sample = self.nusc.get("sample", scene["first_sample_token"])
         self.camera_calib = self.calib.get_camera_calibration(sample)
@@ -46,6 +47,7 @@ class Projection(Node):
         self.radar_sub_ = self.create_subscription(PointCloud2, "/ros/radar/points", self.radar_callback, qos_profile = self.qos_profile)
         self.img_sub_ = self.create_subscription(Image, "/ros/camera/images_sender", self.img_callback, qos_profile = self.qos_profile)
         self.bb_sub_ = self.create_subscription(BoundingBoxList, "/processing/bounding_boxes", self.boundingbox_callback, qos_profile = self.qos_profile)
+        self.counter = 0
         
     def boundingbox_callback(self, bb_msg):
         print("BBox callback!")
@@ -73,10 +75,10 @@ class Projection(Node):
         u,v = TransformationUtils.point_cloud_to_pixel(camera_points, self.camera_intrinsic)
 
         bb_box_values = self.last_bbox.boxes
-        distances = depth_estimation(bbox=bb_box_values, p_u=u, p_v=v, cam_points=camera_points)
+        distances_based_mean, distances_based_median = depth_estimation(bbox=bb_box_values, p_u=u, p_v=v, cam_points=camera_points)
 
-        # for index, bb in enumerate(bb_box_values):
-        #     # print(f"Center_x = {bb.center_x} \n Center_y = {bb.center_y} \n distance {distances[index]}")
+        for index, bb in enumerate(bb_box_values):
+            print(f"Center_x = {bb.center_x} \n Center_y = {bb.center_y} \n distance {distances_based_median[index]}")
                   
         if self.last_image is not None:
             debug_img = self.bridge.imgmsg_to_cv2(
@@ -85,6 +87,9 @@ class Projection(Node):
                 )
             all_points_img = Visualization.draw_point_cloud(debug_img, u, v)
             debug_imagine = Visualization.draw_detection(all_points_img, bb_box_values, u, v)
+            save_path = os.path.join(self.path_output, str(self.counter)+".jpg")
+            cv2.imwrite(save_path, debug_imagine)
+            self.counter +=1
             all_points_img2ros = self.bridge.cv2_to_imgmsg(debug_imagine, encoding = "bgr8")
             self.pub_deb.publish(all_points_img2ros)
 

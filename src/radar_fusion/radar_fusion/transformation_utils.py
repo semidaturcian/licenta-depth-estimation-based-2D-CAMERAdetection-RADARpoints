@@ -46,12 +46,10 @@ class TransformationUtils:
             camera_calib,
             dtype=np.float64
         )
-
         xyz = np.asarray(
             camera_point[:, :3],
             dtype=np.float64
         )
-
         P = (K @ xyz.T).T
         u = P[:, 0] / P[:, 2]
         v = P[:, 1] / P[:, 2]
