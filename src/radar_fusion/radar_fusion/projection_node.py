@@ -4,7 +4,8 @@ from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy
 
 from radar_fusion.transformation_utils import TransformationUtils
 from radar_fusion.calibration_utils import CalibrationUtils
-from bounding_box_msgs.msg import BoundingBox, BoundingBoxList
+from bounding_box_msgs.msg import BoundingBoxList
+from KPI import KPI
 
 from sensor_msgs.msg import Image, PointCloud2
 from sensor_msgs_py import point_cloud2
@@ -28,6 +29,7 @@ class Projection(Node):
             dataroot=str(DATAROOT),
             verbose=False
         )
+        self.kpi = KPI(DATAROOT)
         self.bridge = CvBridge()
         self.calib = CalibrationUtils(self.nusc)
         self.path_output = '/home/danitur2/semida/licenta/data/results'
@@ -75,10 +77,15 @@ class Projection(Node):
         u,v = TransformationUtils.point_cloud_to_pixel(camera_points, self.camera_intrinsic)
 
         bb_box_values = self.last_bbox.boxes
-        distances_based_mean, distances_based_median = depth_estimation(bbox=bb_box_values, p_u=u, p_v=v, cam_points=camera_points)
+        distances_based_mean, distances_based_median, distances_based_min = depth_estimation(bbox=bb_box_values, p_u=u, p_v=v, cam_points=camera_points)
 
         for index, bb in enumerate(bb_box_values):
             print(f"Center_x = {bb.center_x} \n Center_y = {bb.center_y} \n distance {distances_based_median[index]}")
+
+        #check KPI
+        gt_boxes = self.kpi.get_gt(self.current_sample)
+        # evaluation
+        errors = self.kpi.calculate_error(bb_yolo=bb_box_values, estimated_distances=distances_based_median, bb_gt=gt_boxes)
                   
         if self.last_image is not None:
             debug_img = self.bridge.imgmsg_to_cv2(

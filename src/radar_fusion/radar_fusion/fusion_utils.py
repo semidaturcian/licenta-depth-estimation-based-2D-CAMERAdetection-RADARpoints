@@ -4,6 +4,7 @@ def depth_estimation(bbox, p_u, p_v, cam_points):
 
     distances_based_mean = []
     distances_based_median = []
+    distances_based_min = []
 
     for bb_index, bb in enumerate(bbox):
         x_min = bb.center_x - bb.width / 2
@@ -49,6 +50,21 @@ def depth_estimation(bbox, p_u, p_v, cam_points):
             distances_based_mean.append(np.inf)
             distances_based_median.append(np.inf)
             continue
+
+        # -------------------------
+        # Min
+        # -------------------------
+        X_min = np.mean(filtered_points[:, 0])
+        Y_min = np.mean(filtered_points[:, 1])
+        Z_min = np.mean(filtered_points[:, 2])
+
+        distance_min = distance_estimation(
+            X_min,
+            Y_min,
+            Z_min,
+            type="min"
+        )
+
         # -------------------------
         # Mean
         # -------------------------
@@ -84,6 +100,12 @@ def depth_estimation(bbox, p_u, p_v, cam_points):
             f"X={X_mean:.2f}, "
             f"Y={Y_mean:.2f}, "
             f"Z={Z_mean:.2f}"
+        )        
+        print(
+            f"Min position: "
+            f"X={X_min:.2f}, "
+            f"Y={Y_min:.2f}, "
+            f"Z={Z_min:.2f}"
         )
         print(
             f"Median position: "
@@ -98,13 +120,16 @@ def depth_estimation(bbox, p_u, p_v, cam_points):
         print(
             f"Distance median = {distance_median:.2f} m"
         )
+        print(
+            f"Distance min = {distance_min:.2f} m"
+        )
         distances_based_mean.append(distance_mean)
         distances_based_median.append(distance_median)
+        distances_based_min.append(distance_min)
 
-    return distances_based_mean, distances_based_median
+    return distances_based_mean, distances_based_median, distances_based_min
 
 def filter_points(points):
-
     points = np.asarray(
         points,
         dtype=np.float64

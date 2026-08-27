@@ -52,6 +52,7 @@ class DetectionNode(Node):
             bb_ros.center_y = bb.center_y
             bb_ros.height = bb.width
             bb_ros.width =  bb.height
+            bb_ros.class_id = bb.class_id
             ros_boundingbox.boxes.append(bb_ros)
         ros_boundingbox.header.stamp = self.get_clock().now().to_msg()
         # ros_boundingbox.header.frame_id = map
