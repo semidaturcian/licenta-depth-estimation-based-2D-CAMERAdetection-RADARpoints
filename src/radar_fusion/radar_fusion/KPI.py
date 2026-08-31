@@ -4,7 +4,8 @@ import numpy as np
 from pyquaternion import Quaternion
 from nuscenes.nuscenes import NuScenes
 from nuscenes.utils.geometry_utils import transform_matrix
-from collections import dataclass
+from dataclasses import dataclass
+from nuscenes.utils.data_classes import Box
 
 @dataclass
 class Bbox_GT:
@@ -25,7 +26,7 @@ class KPI:
                 )
 
     def get_gt(self, sample):
-
+        print("Scoatem GT-ul!")
         gt_boxes = []
         cam_token = sample["data"]["CAM_FRONT"]
         cam_data = self.nusc.get(
@@ -58,80 +59,179 @@ class KPI:
         )
 
         for ann_token in sample["anns"]:
+
             annotation = self.nusc.get(
                 "sample_annotation",
                 ann_token
             )
-            global_point = np.array([
+
+            # ---------------------------------------
+            # 1. Construim bounding box-ul 3D
+            # ---------------------------------------
+
+            box = Box(
+                annotation["translation"],
+                annotation["size"],
+                Quaternion(annotation["rotation"])
+            )
+
+            # Cele 8 colturi in sistemul GLOBAL
+            corners_global = box.corners()
+
+            # ---------------------------------------
+            # 2. Transformam GLOBAL -> CAMERA
+            # ---------------------------------------
+
+            corners_global_h = np.vstack([
+                corners_global,
+                np.ones((1, corners_global.shape[1]))
+            ])
+
+            corners_camera = (
+                global_to_camera @ corners_global_h
+            )
+
+            # ---------------------------------------
+            # 3. Verificam daca obiectul este
+            #    in fata camerei
+            # ---------------------------------------
+
+            X = corners_camera[0, :]
+            Y = corners_camera[1, :]
+            Z = corners_camera[2, :]
+
+            if np.all(Z <= 0):
+                continue
+
+            # ---------------------------------------
+            # 4. Proiectam colturile in imagine
+            # ---------------------------------------
+
+            pixels = K @ corners_camera[:3, :]
+
+            u = pixels[0, :] / pixels[2, :]
+            v = pixels[1, :] / pixels[2, :]
+
+            # ---------------------------------------
+            # 5. Construim bounding box-ul 2D
+            # ---------------------------------------
+
+            x_min = np.min(u)
+            x_max = np.max(u)
+
+            y_min = np.min(v)
+            y_max = np.max(v)
+
+            width = x_max - x_min
+            height = y_max - y_min
+
+            center_x = (x_min + x_max) / 2
+            center_y = (y_min + y_max) / 2
+
+            # ---------------------------------------
+            # 6. Distanta pana la centrul obiectului
+            # ---------------------------------------
+
+            global_center = np.array([
                 annotation["translation"][0],
                 annotation["translation"][1],
                 annotation["translation"][2],
                 1.0
             ])
 
-            camera_point = global_to_camera @ global_point
+            camera_center = (
+                global_to_camera @ global_center
+            )
 
-            X, Y, Z = camera_point[:3]
+            X_center = camera_center[0]
+            Y_center = camera_center[1]
+            Z_center = camera_center[2]
 
-            # Obiectul este în spatele camerei
-            if Z <= 0:
-                continue
+            distance = np.sqrt(
+                X_center**2 +
+                Y_center**2 +
+                Z_center**2
+            )
 
-            # Proiectare în imagine
-            pixel = K @ np.array([X, Y, Z])
-
-            u = pixel[0] / pixel[2]
-            v = pixel[1] / pixel[2]
+            # ---------------------------------------
+            # 7. GT bbox
+            # ---------------------------------------
 
             gt_box = Bbox_GT(
-                center_x=u,
-                center_y=v,
-                width=0.0,
-                height=0.0,
+                center_x=float(center_x),
+                center_y=float(center_y),
+                width=float(width),
+                height=float(height),
                 class_id=self.get_class_id(
                     annotation["category_name"]
                 ),
-                distance=np.sqrt(X**2 + Y**2 + Z**2)
+                distance=float(distance)
             )
+
             gt_boxes.append(gt_box)
-            return gt_boxes
+        return gt_boxes
 
     def calculate_error(self, bb_yolo, estimated_distances, bb_gt):
-
+        print("AM inceput evaluarea....")
         threshold = 0.5
         errors = []
         for yolo_index, bb_y in enumerate(bb_yolo):
-            if bb_y.class_id not in [2, 5, 7]:
+            if bb_y.class_id not in [0, 2, 5, 7]:
+                print(f"bb class_id: {bb_y.class_id}")
                 continue
             best_iou = 0.0
             best_gt = None
+            # min_error = float('inf')
+            min_dist = float('inf')
+            estimated = estimated_distances[yolo_index]
+            if estimated == np.inf:
+                continue
             for gt in bb_gt:
+                # er = gt.distance - estimated
+                # if min_error > abs(er):
+                #     ground_truth = gt.distance
+                #     min_error = er
+                # dist = np.sqrt((gt.center_x - bb_y.center_x)**2 + (gt.center_y - bb_y.center_y)**2)
+                # if min_dist > dist:
+                #     min_dist = dist
+                #     best_gt = gt
+                #     print(f"Best GT: {best_gt}")
+                
                 if gt.class_id != bb_y.class_id:
+                    print(f"gt.class_id={gt.class_id} \n bb_y.class_id={bb_y.class_id}")
                     continue
                 iou = self.compute_iou(
                     bb_y,
                     gt
                 )
+                print(f"IoU= {iou}")
                 if iou > best_iou:
                     best_iou = iou
                     best_gt = gt
 
             if best_gt is None:
+                print("No gt")
                 continue
+            else:
+                print("We have a matched GT")
 
             if best_iou < threshold:
+                print("No IoU")
                 continue
 
-            estimated = estimated_distances[yolo_index]
+            
             ground_truth = best_gt.distance
             error = estimated - ground_truth
+            
             errors.append(error)
+            
+            # errors.append(min_error)
             print(
                 f"class={bb_y.class_id} | "
-                f"IoU={best_iou:.2f} | "
                 f"estimated={estimated:.2f} m | "
                 f"GT={ground_truth:.2f} m | "
                 f"error={error:.2f} m"
+                # f"error={min_error:.2f} m"
             )
         return errors
 

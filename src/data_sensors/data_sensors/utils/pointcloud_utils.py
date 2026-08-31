@@ -75,8 +75,8 @@ class PointCloudUtils:
             points
         )
 
-       @staticmethod
-        def from_pointcloud2(msg) -> np.ndarray:
+    @staticmethod
+    def from_pointcloud2(msg) -> np.ndarray:
             """
             Convert a PointCloud2 message into a Nx6 numpy array.
 
