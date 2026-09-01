@@ -92,15 +92,15 @@ class Projection(Node):
                 radar_data["timestamp"]
             ] = sample["token"]
 
-        self.get_logger().info(
-            f"Camera timestamp mappings: "
-            f"{len(self.camera_timestamp_to_sample)}"
-        )
+        # self.get_logger().info(
+        #     f"Camera timestamp mappings: "
+        #     f"{len(self.camera_timestamp_to_sample)}"
+        # )
 
-        self.get_logger().info(
-            f"Radar timestamp mappings: "
-            f"{len(self.radar_timestamp_to_sample)}"
-        )
+        # self.get_logger().info(
+        #     f"Radar timestamp mappings: "
+        #     f"{len(self.radar_timestamp_to_sample)}"
+        # )
 
         self.bridge = CvBridge()
         self.path_output = (
@@ -299,10 +299,7 @@ class Projection(Node):
             Visualization.draw_point_cloud(debug_img, u, v)
         )
         debug_imagine = (
-            Visualization.draw_detection(
-                all_points_img,
-                bb_box_values,
-                u,v)
+            Visualization.draw_detection(all_points_img, distances_based_min, bb_box_values, u,v)
         )
         save_path = os.path.join(
             self.path_output,

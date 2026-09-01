@@ -49,8 +49,8 @@ def depth_estimation(bbox, p_u, p_v, cam_points):
         if len(filtered_points) == 0:
             distances_based_mean.append(np.inf)
             distances_based_median.append(np.inf)
+            distances_based_min.append(np.inf)
             continue
-
         # -------------------------
         # Min
         # -------------------------
@@ -64,7 +64,6 @@ def depth_estimation(bbox, p_u, p_v, cam_points):
             Z_min,
             type="min"
         )
-
         # -------------------------
         # Mean
         # -------------------------
