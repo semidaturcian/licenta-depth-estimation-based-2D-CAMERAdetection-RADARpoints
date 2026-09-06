@@ -43,7 +43,8 @@ class NuScenesPlayer(Node):
         )
         self.radar_preprocessor = RadarPreprocessor()
         # Scene
-        self.scene = self._nusc.scene[0]
+        # print(f" len scenes {self._nusc.scene.__len__()}")
+        self.scene = self._nusc.scene[1]
         self.current_sample = self._nusc.get(
             "sample",
             self.scene["first_sample_token"]
@@ -55,7 +56,7 @@ class NuScenesPlayer(Node):
         self.camera_publisher = self.create_publisher(Image, '/ros/camera/images_sender', qos_profile=self.qos_profile)
         self.radar_publisher = self.create_publisher(PointCloud2, '/ros/radar/points', qos_profile=self.qos_profile)
 
-        _ = self.create_timer(0.06, self.callback)
+        _ = self.create_timer(0.17, self.callback)
 
     def callback(self):
         stamp = self.__nuscenes_timestamp_to_ros(self.current_sample["timestamp"] )
@@ -94,12 +95,12 @@ class NuScenesPlayer(Node):
         self.__advance_sample()
 
     def __advance_sample(self):
-        if self.current_sample["next"] == "":
-            self.current_sample = self._nusc.get(
-                "sample",
-                 self.scene["first_sample_token"]
-                 )
-            return
+        # if self.current_sample["next"] == "":
+        #     self.current_sample = self._nusc.get(
+        #         "sample",
+        #          self.scene["first_sample_token"]
+        #          )
+        #     return
 
         self.current_sample = self._nusc.get(
             "sample",

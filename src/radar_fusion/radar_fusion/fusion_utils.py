@@ -1,10 +1,14 @@
 import numpy as np
 
+def dist_to_center(bb, u,v):
+    return np.sqrt((bb.center_x - u)**2 + (bb.center_y - v)**2)
+
 def depth_estimation(bbox, p_u, p_v, cam_points):
 
     distances_based_mean = []
     distances_based_median = []
     distances_based_min = []
+    distances_based_filter = []
 
     for bb_index, bb in enumerate(bbox):
         x_min = bb.center_x - bb.width / 2
@@ -13,9 +17,11 @@ def depth_estimation(bbox, p_u, p_v, cam_points):
         y_min = bb.center_y - bb.height / 2
         y_max = bb.center_y + bb.height / 2
         associated_points = []
+        centers_dists = []
         for index, (u, v) in enumerate(zip(p_u, p_v)):
             if (x_min <= u <= x_max) and (y_min <= v <= y_max):
                 point_camera = cam_points[index]
+                centers_dists.append(dist_to_center(bb, u, v))
                 X = point_camera[0]
                 Y = point_camera[1]
                 Z = point_camera[2]
@@ -24,22 +30,31 @@ def depth_estimation(bbox, p_u, p_v, cam_points):
                     Y,
                     Z
                 ])
-                print(
-                    f"BB {bb_index}: "
-                    f"Radar point {index} -> "
-                    f"pixel=({u:.1f}, {v:.1f}), "
-                    f"X={X:.2f}, "
-                    f"Y={Y:.2f}, "
-                    f"Z={Z:.2f} m"
-                )
+                # print(
+                #     f"BB {bb_index}: "
+                #     f"Radar point {index} -> "
+                #     f"pixel=({u:.1f}, {v:.1f}), "
+                #     f"X={X:.2f}, "
+                #     f"Y={Y:.2f}, "
+                #     f"Z={Z:.2f} m"
+                # )
         if not associated_points:
             distances_based_mean.append(np.inf)
             distances_based_median.append(np.inf)
+            distances_based_min.append(np.inf)
+            distances_based_filter.append(np.inf)
             continue
         associated_points = np.asarray(
             associated_points,
             dtype=np.float64
         )
+
+        ### center-dist method
+        if( centers_dists):
+            xyz_basez_centers = associated_points[centers_dists.index(min(centers_dists))]
+            distance_based_filter = distance_estimation(xyz_basez_centers[0], xyz_basez_centers[1], xyz_basez_centers[2], type='centers')
+            
+            # print(f"distance to center points: {distance_based_filter}")
         # -------------------------
         # Filter outliers using Z
         # -------------------------
@@ -50,13 +65,14 @@ def depth_estimation(bbox, p_u, p_v, cam_points):
             distances_based_mean.append(np.inf)
             distances_based_median.append(np.inf)
             distances_based_min.append(np.inf)
+            distances_based_filter.append(np.inf)
             continue
         # -------------------------
         # Min
         # -------------------------
-        X_min = np.mean(filtered_points[:, 0])
-        Y_min = np.mean(filtered_points[:, 1])
-        Z_min = np.mean(filtered_points[:, 2])
+        X_min = min(filtered_points[:, 0])
+        Y_min = min(filtered_points[:, 1])
+        Z_min = min(filtered_points[:, 2])
 
         distance_min = distance_estimation(
             X_min,
@@ -89,44 +105,54 @@ def depth_estimation(bbox, p_u, p_v, cam_points):
             Z_median,
             type="median"
         )
-        print(
-            f"BB {bb_index}: "
-            f"{len(associated_points)} associated points -> "
-            f"{len(filtered_points)} inliers"
-        )
-        print(
-            f"Mean position: "
-            f"X={X_mean:.2f}, "
-            f"Y={Y_mean:.2f}, "
-            f"Z={Z_mean:.2f}"
-        )        
-        print(
-            f"Min position: "
-            f"X={X_min:.2f}, "
-            f"Y={Y_min:.2f}, "
-            f"Z={Z_min:.2f}"
-        )
-        print(
-            f"Median position: "
-            f"X={X_median:.2f}, "
-            f"Y={Y_median:.2f}, "
-            f"Z={Z_median:.2f}"
-        )
-        print(
-            f"Distance mean = {distance_mean:.2f} m"
-        )
+        # print(
+        #     f"BB {bb_index}: "
+        #     f"{len(associated_points)} associated points -> "
+        #     f"{len(filtered_points)} inliers"
+        # )
+        # print(
+        #     f"Mean position: "
+        #     f"X={X_mean:.2f}, "
+        #     f"Y={Y_mean:.2f}, "
+        #     f"Z={Z_mean:.2f}"
+        # )        
+        # print(
+        #     f"Min position: "
+        #     f"X={X_min:.2f}, "
+        #     f"Y={Y_min:.2f}, "
+        #     f"Z={Z_min:.2f}"
+        # )
+        # print(
+        #     f"Median position: "
+        #     f"X={X_median:.2f}, "
+        #     f"Y={Y_median:.2f}, "
+        #     f"Z={Z_median:.2f}"
+        # )
+        # print(
+        #     f"Nearest to center position: "
+        #     f"X={xyz_basez_centers[0]:.2f}, "
+        #     f"Y={xyz_basez_centers[1]:.2f}, "
+        #     f"Z={xyz_basez_centers[2]:.2f}"
+        # )
+        # print(
+        #     f"Distance mean = {distance_mean:.2f} m"
+        # )
+        # print(
+        #     f"Distance mean = {distance_based_filter:.2f} m"
+        # )
 
-        print(
-            f"Distance median = {distance_median:.2f} m"
-        )
-        print(
-            f"Distance min = {distance_min:.2f} m"
-        )
+        # print(
+        #     f"Distance median = {distance_median:.2f} m"
+        # )
+        # print(
+        #     f"Distance min = {distance_min:.2f} m"
+        # )
         distances_based_mean.append(distance_mean)
         distances_based_median.append(distance_median)
         distances_based_min.append(distance_min)
+        distances_based_filter.append(distance_based_filter)
 
-    return distances_based_mean, distances_based_median, distances_based_min
+    return distances_based_mean, distances_based_median, distances_based_min, distances_based_filter
 
 def filter_points(points):
     points = np.asarray(
@@ -144,6 +170,6 @@ def filter_points(points):
 
 def distance_estimation(x, y, z,  type = "mean"):
      distance = np.sqrt(x**2 + y**2 + z**2)
-     print(f"Distanta {type} este {distance}")
+    #  print(f"Distanta {type} este {distance}")
      return distance
 

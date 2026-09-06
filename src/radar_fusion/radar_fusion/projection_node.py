@@ -62,10 +62,6 @@ class Projection(Node):
             calibration_sample
         )
 
-        # --------------------------------------------------
-        # Timestamp -> sample token
-        # --------------------------------------------------
-
         self.camera_timestamp_to_sample = {}
         self.radar_timestamp_to_sample = {}
 
@@ -91,16 +87,6 @@ class Projection(Node):
             self.radar_timestamp_to_sample[
                 radar_data["timestamp"]
             ] = sample["token"]
-
-        # self.get_logger().info(
-        #     f"Camera timestamp mappings: "
-        #     f"{len(self.camera_timestamp_to_sample)}"
-        # )
-
-        # self.get_logger().info(
-        #     f"Radar timestamp mappings: "
-        #     f"{len(self.radar_timestamp_to_sample)}"
-        # )
 
         self.bridge = CvBridge()
         self.path_output = (
@@ -152,6 +138,7 @@ class Projection(Node):
         bb_timestamp = self.ros_stamp_to_us(
             bb_msg.header.stamp
         )
+        print(f"Numar obiecte detectate in frame: {len(bb_msg.boxes)}")
         sample_token = self.camera_timestamp_to_sample.get(
             bb_timestamp
         )
@@ -167,6 +154,7 @@ class Projection(Node):
                 f"Radarul pentru sample "
                 f"{sample_token} nu a sosit inca."
             )
+
             # Pastram BBox-ul
             self.bbox_buffer[sample_token] = bb_msg
             self.cleanup_buffer( self.bbox_buffer)
@@ -182,9 +170,6 @@ class Projection(Node):
         radar_timestamp = self.ros_stamp_to_us(
             radar_msg.header.stamp
         )
-        print(
-            f"Radar timestamp: {radar_timestamp}"
-        )
         sample_token = self.radar_timestamp_to_sample.get(
             radar_timestamp
         )
@@ -194,7 +179,6 @@ class Projection(Node):
                 f"radar timestamp {radar_timestamp}"
             )
             return
-        print( f"Radar -> sample: {sample_token}")
         self.radar_buffer[sample_token] = radar_msg
         self.cleanup_buffer(
             self.radar_buffer)
@@ -243,47 +227,78 @@ class Projection(Node):
         (
             distances_based_mean,
             distances_based_median,
-            distances_based_min
+            distances_based_min,
+            distances_based_filter
         ) = depth_estimation(
             bbox=bb_box_values,
             p_u=u,
             p_v=v,
             cam_points=camera_points
         )
-        for index, bb in enumerate(bb_box_values):
-            print(
-                f"Center_x = {bb.center_x}\n"
-                f"Center_y = {bb.center_y}\n"
-                f"distance = "
-                f"{distances_based_median[index]}"
-            )
-
+        # for index, bb in enumerate(bb_box_values):
+        #     print(
+        #         f"Center_x = {bb.center_x}\n"
+        #         f"Center_y = {bb.center_y}\n"
+        #         f"distance based centers = "
+        #         f"{distances_based_filter[index]}"
+        #         f"distance based min = "
+        #         f"{distances_based_min[index]}"
+        #         f"distance based mean = "
+        #         f"{distances_based_mean[index]}"
+        #         f"distance based median = "
+        #         f"{distances_based_median[index]}"
+        #     )
+        
         sample = self.nusc.get(
             "sample",
             sample_token
         )
 
-        print(
-            f"Sample token used for GT: "
-            f"{sample_token}"
-        )
         gt_boxes = self.kpi.get_gt(
             sample
         )
-        print(
-            f"Length of gt_boxes: "
-            f"{len(gt_boxes)}"
-        )
+        print(f"Length of gt_boxes: {len(gt_boxes)}")
         errors = self.kpi.calculate_error(
             bb_yolo=bb_box_values,
             estimated_distances=distances_based_median,
             bb_gt=gt_boxes
         )
         print(
-            f"Errors sunt... : {errors}"
+            f"Erorile bazate pe estimarea mediana : {errors}"
             if errors is not None
             else "Error is none"
         )
+        errors = self.kpi.calculate_error(
+            bb_yolo=bb_box_values,
+            estimated_distances=distances_based_filter,
+            bb_gt=gt_boxes
+        )
+        print(
+            f"Erorile bazate pe estimarea center : : {errors}"
+            if errors is not None
+            else "Error is none"
+        )
+        errors = self.kpi.calculate_error(
+            bb_yolo=bb_box_values,
+            estimated_distances=distances_based_mean,
+            bb_gt=gt_boxes
+        )
+        print(
+            f"Erorile bazate pe estimarea mean : {errors}"
+            if errors is not None
+            else "Error is none"
+        )
+        errors = self.kpi.calculate_error(
+            bb_yolo=bb_box_values,
+            estimated_distances=distances_based_min,
+            bb_gt=gt_boxes
+        )
+        print(
+            f"Erorile bazate pe estimarea min : {errors}"
+            if errors is not None
+            else "Error is none"
+        )
+
         image_timestamp = None
         image_timestamp = self.ros_stamp_to_us(
             bb_msg.header.stamp
@@ -295,11 +310,12 @@ class Projection(Node):
         debug_img = self.bridge.imgmsg_to_cv2(image_msg,
             desired_encoding="bgr8"
         )
+
         all_points_img = (
             Visualization.draw_point_cloud(debug_img, u, v)
         )
         debug_imagine = (
-            Visualization.draw_detection(all_points_img, distances_based_min, bb_box_values, u,v)
+            Visualization.draw_detection(all_points_img, distances_based_filter, bb_box_values, u,v)
         )
         save_path = os.path.join(
             self.path_output,
